@@ -1,0 +1,40 @@
+CREATE DATABASE IF NOT EXISTS inventory_management;
+
+USE inventory_management;
+
+CREATE TABLE IF NOT EXISTS customers (
+    id INT NOT NULL AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    phone VARCHAR(15) DEFAULT NULL,
+    PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS products (
+    id INT NOT NULL AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    category VARCHAR(100) DEFAULT NULL,
+    quantity INT NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    min_stock INT DEFAULT 5,
+    PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS sales (
+    id INT NOT NULL AUTO_INCREMENT,
+    customer_name VARCHAR(100) DEFAULT NULL,
+    product_name VARCHAR(100) DEFAULT NULL,
+    quantity INT NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    total DECIMAL(10,2) NOT NULL,
+    sale_date DATE DEFAULT NULL,
+    PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id INT NOT NULL AUTO_INCREMENT,
+    product_name VARCHAR(100) DEFAULT NULL,
+    message VARCHAR(255) DEFAULT NULL,
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(20) DEFAULT 'Pending',
+    PRIMARY KEY (id)
+);
