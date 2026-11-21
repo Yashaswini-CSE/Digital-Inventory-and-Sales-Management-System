@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Reports - Inventory System</title>
+    <link rel="stylesheet" href="style.css">
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+
+<body>
+
+    <div class="sidebar">
+        <h2>Inventory System</h2>
+        <a href="index.html">Dashboard</a>
+        <a href="products.html">Products</a>
+        <a href="customers.html">Customers</a>
+        <a href="sales.html">Sales</a>
+        <a href="notifications.html">Notifications</a>
+        <a href="reports.html">Reports</a>
+    </div>
+
+    <div class="main">
+        <h1>Sales Reports</h1>
+        <p>View sales performance and transaction details.</p>
+        <div class="report-filters">
+    <h2>Generate Sales Report</h2>
+
+    <label for="reportPeriod">Select Period:</label>
+    <select id="reportPeriod">
+        <option value="week">Last 7 Days</option>
+        <option value="month">Last 1 Month</option>
+        <option value="custom">Custom Date Range</option>
+    </select>
+
+    <div id="customDates" style="display:none;">
+        <label for="startDate">From:</label>
+        <input type="date" id="startDate">
+
+        <label for="endDate">To:</label>
+        <input type="date" id="endDate">
+    </div>
+
+    <button type="button" onclick="generateSalesReport()">
+        Generate Report
+    </button>
+</div>
+
+        <div class="cards">
+
+            <div class="card">
+                <h3>Total Sales</h3>
+                <h2 id="totalSales">₹0</h2>
+            </div>
+
+            <div class="card">
+                <h3>Total Transactions</h3>
+                <h2 id="totalTransactions">0</h2>
+            </div>
+
+            <div class="card">
+                <h3>Products Sold</h3>
+                <h2 id="productsSold">0</h2>
+            </div>
+
+        </div>
+       <h2 class="section-title">Sales Analytics</h2>
+<div class="card">
+    <h3>Daily Sales - Bar Graph</h3>
+    <canvas id="salesChart"></canvas>
+</div>
+
+<div class="card">
+    <h3>Product-wise Sales - Doughnut Graph</h3>
+    <canvas id="productChart"></canvas>
+</div>
+
+
+
+
+<div class="card">
+    <h3>Overall Sales Summary</h3>
+    <p id="salesSummary">
+        Generate a report to view your sales summary.
+    </p>
+</div>
+
+        <h2 class="section-title">Sales History</h2>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Sale ID</th>
+                        <th>Customer</th>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                        <th>Total Amount</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+
+                <tbody id="reportTable">
+                   
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+    <script src="script.js"></script>
+
+</body>
+</html>

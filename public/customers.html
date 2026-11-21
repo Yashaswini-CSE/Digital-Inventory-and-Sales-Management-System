@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customers - Inventory System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>Inventory System</h2>
+        <a href="index.html">Dashboard</a>
+        <a href="products.html">Products</a>
+        <a href="customers.html">Customers</a>
+        <a href="sales.html">Sales</a>
+        <a href="notifications.html">Notifications</a>
+        <a href="reports.html">Reports</a>
+    </div>
+
+    <div class="main">
+        <h1>Customers Management</h1>
+        <p>Add and manage customer details.</p>
+
+        <div class="product-form">
+            <h2>Add New Customer</h2>
+
+            <form id="customerForm">
+                <input type="text" id="customerName"
+                    placeholder="Customer Name" required>
+
+                <input type="tel" id="phone"
+                    placeholder="Phone Number"
+                    pattern="[0-9]{10}"
+                    maxlength="10" required>
+
+                <button type="submit">Add Customer</button>
+            </form>
+            <div id="editCustomerForm" style="display:none;">
+    <h2>Edit Customer</h2>
+
+    <input type="text" id="editCustomerName" placeholder="Customer Name">
+
+    <input type="tel" id="editCustomerPhone"
+        placeholder="Phone Number" maxlength="10">
+
+    <button type="button" onclick="updateCustomer()">Update Customer</button>
+
+    <button type="button" onclick="cancelCustomerEdit()">Cancel</button>
+</div>
+        </div>
+
+        <h2 class="section-title">Customer List</h2>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Customer ID</th>
+                        <th>Customer Name</th>
+                        <th>Phone Number</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+
+                <tbody id="customerTable">
+                   
+                </tbody>
+            </table>
+        </div>
+    </div>
+     <script src="script.js"></script>
+    <script>
+       const customerForm = document.getElementById("customerForm");
+const customerTable = document.getElementById("customerTable");
+
+function displayCustomers() {
+    customerTable.innerHTML = "";
+
+    customers.forEach((customer, index) => {
+        const row = customerTable.insertRow();
+
+        row.insertCell().textContent = customer.id || index + 1;
+        row.insertCell().textContent = customer.name;
+        row.insertCell().textContent = customer.phone;
+
+        const actionCell = row.insertCell();
+
+        const editButton = document.createElement("button");
+        editButton.textContent = "Edit";
+        editButton.onclick = () => editCustomer(index);
+
+        const deleteButton = document.createElement("button");
+        deleteButton.textContent = "Delete";
+        deleteButton.onclick = () => deleteCustomer(index);
+
+        actionCell.append(editButton, deleteButton);
+    });
+}
+
+customerForm.addEventListener("submit",async function(event) {
+    event.preventDefault();
+
+    const name = document.getElementById("customerName").value.trim();
+    const phone = document.getElementById("phone").value.trim();
+
+    if (!/^[0-9]{10}$/.test(phone)) {
+        alert("Enter a valid 10-digit phone number.");
+        return;
+    }
+    try {
+    const response = await fetch("/api/customers", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ name, phone })
+    });
+
+    if (!response.ok) {
+        throw new Error("Database save failed");
+    }
+
+    const result = await response.json();
+
+    customers.push({
+        id: result.id,
+        name,
+        phone
+    });
+
+    saveData();
+    displayCustomers();
+    customerForm.reset();
+
+} catch (error) {
+    alert("Could not save customer to database.");
+    console.error(error);
+}
+
+});
+async function deleteCustomer(index) {
+    if (!confirm("Delete this customer?")) return;
+
+    const customer = customers[index];
+
+    try {
+        const response = await fetch(`/api/customers/${customer.id}`, {
+            method: "DELETE"
+        });
+
+        if (!response.ok) {
+            throw new Error("Database delete failed");
+        }
+
+        customers.splice(index, 1);
+        saveData();
+        displayCustomers();
+
+        alert("Customer deleted successfully!");
+
+    } catch (error) {
+        console.error(error);
+        alert("Could not delete customer from database.");
+    }
+}
+
+let editingCustomerIndex = null;
+
+function editCustomer(index) {
+    editingCustomerIndex = index;
+
+    const customer = customers[index];
+
+    document.getElementById("editCustomerName").value = customer.name;
+    document.getElementById("editCustomerPhone").value = customer.phone;
+
+    document.getElementById("editCustomerForm").style.display = "block";
+}
+async function updateCustomer() {
+    if (editingCustomerIndex === null) return;
+
+    const name = document.getElementById("editCustomerName").value.trim();
+    const phone = document.getElementById("editCustomerPhone").value.trim();
+
+    if (!name || !/^[0-9]{10}$/.test(phone)) {
+        alert("Enter a valid name and 10-digit phone number.");
+        return;
+    }
+
+    const customer = customers[editingCustomerIndex];
+
+    try {
+        const response = await fetch(`/api/customers/${customer.id}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ name, phone })
+        });
+
+        if (!response.ok) {
+            throw new Error("Database update failed");
+        }
+
+        customer.name = name;
+        customer.phone = phone;
+
+        saveData();
+        displayCustomers();
+
+        document.getElementById("editCustomerForm").style.display = "none";
+        editingCustomerIndex = null;
+
+        alert("Customer updated successfully!");
+
+    } catch (error) {
+        console.error(error);
+        alert("Could not update customer in database.");
+    }
+}
+function cancelCustomerEdit() {
+    document.getElementById("editCustomerForm").style.display = "none";
+    editingCustomerIndex = null;
+}
+async function loadCustomersFromDatabase() {
+    try {
+        const response = await fetch("/api/customers");
+
+        if (!response.ok) {
+            throw new Error("Failed to load customers");
+        }
+
+        const databaseCustomers = await response.json();
+
+        customers = databaseCustomers.map(customer => ({
+            id: customer.id,
+            name: customer.name,
+            phone: customer.phone
+        }));
+
+        saveData();
+        displayCustomers();
+
+    } catch (error) {
+        console.error(error);
+        alert("Could not load customers from database.");
+    }
+}
+
+loadCustomersFromDatabase();
+    </script>
+   
+
+</body>
+</html>

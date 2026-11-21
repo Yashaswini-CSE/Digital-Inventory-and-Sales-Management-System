@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Notifications</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>Inventory System</h2>
+        <a href="index.html">Dashboard</a>
+        <a href="products.html">Products</a>
+        <a href="customers.html">Customers</a>
+        <a href="sales.html">Sales</a>
+        <a href="notifications.html">Notifications</a>
+        <a href="reports.html">Reports</a>
+    </div>
+
+    <div class="main">
+        <h1>Stock Notifications</h1>
+        <p>Monitor products that are running low.</p>
+
+        <div class="cards">
+
+            <div class="card">
+                <h3>Total Low Stock Items</h3>
+                <h2 id="lowCount">2</h2>
+            </div>
+
+            <div class="card">
+                <h3>Available Items</h3>
+                <h2 id="availableCount">1</h2>
+            </div>
+
+        </div>
+
+        <h2 class="section-title">Low Stock Alerts</h2>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Product Name</th>
+                        <th>Available Quantity</th>
+                        <th>Minimum Stock</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+
+                <tbody id="lowStockTable"></tbody>
+            </table>
+        </div>
+    </div>
+ <script src="script.js"></script>
+    
+<script>
+async function displayNotifications() {
+    const lowStockTable = document.getElementById("lowStockTable");
+
+    try {
+        const response = await fetch("/api/products");
+
+        if (!response.ok) {
+            throw new Error("Failed to load products");
+        }
+
+        const products = await response.json();
+
+        const lowStockProducts = products.filter(product =>
+            Number(product.quantity) <= Number(product.min_stock)
+        );
+
+        const availableProducts = products.filter(product =>
+            Number(product.quantity) > Number(product.min_stock)
+        );
+
+        document.getElementById("lowCount").textContent =
+            lowStockProducts.length;
+
+        document.getElementById("availableCount").textContent =
+            availableProducts.length;
+
+        lowStockTable.innerHTML = "";
+
+        lowStockProducts.forEach(product => {
+            const row = lowStockTable.insertRow();
+
+            row.insertCell().textContent = product.name;
+            row.insertCell().textContent = product.quantity;
+            row.insertCell().textContent = product.min_stock;
+            row.insertCell().textContent = "Low Stock";
+        });
+
+        if (lowStockProducts.length === 0) {
+            const row = lowStockTable.insertRow();
+            const cell = row.insertCell();
+
+            cell.colSpan = 4;
+            cell.textContent = "No low-stock products!";
+        }
+
+    } catch (error) {
+        console.error(error);
+        alert("Could not load notifications from database.");
+    }
+}
+
+displayNotifications();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Inventory Management System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>Inventory System</h2>
+
+       <a href="index.html">Dashboard</a>
+       <a href="products.html">Products</a>
+       <a href="customers.html">Customers</a>
+       <a href="sales.html">Sales</a>
+       <a href="notifications.html">Notifications</a>
+       <a href="reports.html">Reports</a>
+    </div>
+
+   <div class="main">
+   <h1>Welcome! 👋</h1>
+<p>Digital Inventory & Sales Management Dashboard</p>
+
+    <div class="cards">
+        <div class="card">
+            <h3>Total Products</h3>
+            <h2 id="dashboardProducts">0</h2>
+        </div>
+
+        <div class="card">
+            <h3>Total Customers</h3>
+            <h2 id="dashboardCustomers">0</h2>
+        </div>
+
+        <div class="card">
+            <h3>Today's Sales</h3>
+            <h2 id="dashboardSales">₹0</h2>
+        </div>
+
+        <div class="card">
+            <h3>Low Stock Items</h3>
+            <h2 id="dashboardLowStock">0</h2>
+        </div>
+    </div>
+
+    <h2 class="section-title">Low Stock Notifications</h2>
+    <div class="notification" id="dashboardNotifications"></div>
+</div>
+    </div>
+    <script src="script.js"></script>
+   
+<script>
+async function updateDashboard() {
+
+    try {
+        const [productResponse, customerResponse, salesResponse] =
+            await Promise.all([
+                fetch("/api/products"),
+                fetch("/api/customers"),
+                fetch("/api/sales")
+            ]);
+
+        if (!productResponse.ok ||
+            !customerResponse.ok ||
+            !salesResponse.ok) {
+            throw new Error("Failed to load dashboard data");
+        }
+
+        const products = await productResponse.json();
+        const customers = await customerResponse.json();
+        const sales = await salesResponse.json();
+
+        // Total products
+        document.getElementById("dashboardProducts").textContent =
+            products.length;
+
+        // Total customers
+        document.getElementById("dashboardCustomers").textContent =
+            customers.length;
+
+        // Today's sales
+        const today = new Date();
+
+        const salesToday = sales
+            .filter(sale => {
+                if (!sale.date) return false;
+
+                let saleDate;
+
+                if (/^\d{4}-\d{2}-\d{2}/.test(sale.date)) {
+                    saleDate = new Date(sale.date.slice(0, 10) + "T00:00:00");
+                } else {
+                    const parts = sale.date.split("/");
+
+                    if (parts.length !== 3) return false;
+
+                    saleDate = new Date(
+                        Number(parts[2]),
+                        Number(parts[1]) - 1,
+                        Number(parts[0])
+                    );
+                }
+
+                return saleDate.getFullYear() === today.getFullYear() &&
+                    saleDate.getMonth() === today.getMonth() &&
+                    saleDate.getDate() === today.getDate();
+            })
+            .reduce((sum, sale) => sum + Number(sale.total || 0), 0);
+
+        document.getElementById("dashboardSales").textContent =
+            "₹" + salesToday.toFixed(2);
+
+        // Low stock products
+        const lowProducts = products.filter(product =>
+            Number(product.quantity) <= Number(product.min_stock ?? 5)
+        );
+
+        document.getElementById("dashboardLowStock").textContent =
+            lowProducts.length;
+
+        // Low stock notifications
+        const notificationBox =
+            document.getElementById("dashboardNotifications");
+
+        notificationBox.innerHTML = "";
+
+        if (lowProducts.length === 0) {
+            notificationBox.textContent =
+                "No low-stock products.";
+        } else {
+            lowProducts.forEach(product => {
+                const p = document.createElement("p");
+
+                p.textContent =
+                    product.name + " - Only " +
+                    product.quantity + " items remaining!";
+
+                notificationBox.appendChild(p);
+            });
+        }
+
+    } catch (error) {
+        console.error(error);
+        alert("Could not load dashboard data from database.");
+    }
+}
+
+updateDashboard();
+</script>
+
+
+</body>
+</html>

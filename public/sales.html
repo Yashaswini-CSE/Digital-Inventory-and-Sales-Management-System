@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Management</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>Inventory System</h2>
+        <a href="index.html">Dashboard</a>
+        <a href="products.html">Products</a>
+        <a href="customers.html">Customers</a>
+        <a href="sales.html">Sales</a>
+        <a href="notifications.html">Notifications</a>
+        <a href="reports.html">Reports</a>
+    </div>
+
+    <div class="main">
+        <h1>Sales Management</h1>
+        <p>Record and manage customer purchases.</p>
+
+        <div class="product-form">
+            <h2>Record New Sale</h2>
+
+            <form id="salesForm">
+<label>Customer Name</label><br>
+<select id="customer" required>
+    <option value="">Select Customer</option>
+</select>
+                <br><br>
+
+                <label>Product Name</label><br>
+                <select id="product"required>
+                    <option value="">Select Product</option>
+                </select>               
+
+                <br><br>
+
+                <label>Quantity</label><br>
+                <input type="number" id="quantity"
+                    min="1" placeholder="Quantity" required>
+
+                <br><br>
+
+                <label>Price per Item (₹)</label><br>
+                <input type="number" id="price"
+    min="0.01" step="0.01"
+    placeholder="Automatic Price" readonly required>
+
+                <br><br>
+
+                <label>Total Amount</label><br>
+                <input type="text" id="total"
+                    placeholder="₹0.00" readonly>
+
+                <br><br>
+
+                <button type="submit">Record Sale</button>
+
+            </form>
+        </div>
+
+        <h2 class="section-title">Sales History</h2>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Sale ID</th>
+                        <th>Customer</th>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                        <th>Total Amount</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+
+                <tbody id="salesTable"></tbody>
+            </table>
+        </div>
+    </div>
+    <script src="script.js"></script>
+    <script>
+       
+const productDropdown = document.getElementById("product");
+const customerDropdown = document.getElementById("customer");
+const form = document.getElementById("salesForm");
+const quantityInput = document.getElementById("quantity");
+const priceInput = document.getElementById("price");
+const totalInput = document.getElementById("total");
+const salesTable = document.getElementById("salesTable");
+
+// Load available products from MySQL
+async function loadProductsForSales() {
+    try {
+        const response = await fetch("/api/products");
+
+        if (!response.ok) {
+            throw new Error("Failed to load products");
+        }
+
+        const databaseProducts = await response.json();
+
+        productDropdown.innerHTML =
+            '<option value="">Select Product</option>';
+
+        databaseProducts.forEach(item => {
+            const option = document.createElement("option");
+            option.value = item.name;
+            option.textContent = item.name;
+            productDropdown.appendChild(option);
+        });
+
+    } catch (error) {
+        console.error(error);
+        alert("Could not load products.");
+    }
+}
+
+loadProductsForSales();
+// Load customers from MySQL
+async function loadCustomersForSales() {
+    try {
+        const response = await fetch("/api/customers");
+
+        if (!response.ok) {
+            throw new Error("Failed to load customers");
+        }
+
+        const databaseCustomers = await response.json();
+
+        customerDropdown.innerHTML =
+            '<option value="">Select Customer</option>';
+
+        databaseCustomers.forEach(item => {
+            const option = document.createElement("option");
+
+            option.value = item.name;
+            option.textContent = item.name;
+
+            customerDropdown.appendChild(option);
+        });
+
+    } catch (error) {
+        console.error(error);
+        alert("Could not load customers.");
+    }
+}
+
+loadCustomersForSales();
+// Display saved sales
+function displaySales() {
+    salesTable.innerHTML = "";
+
+    sales.forEach(sale => {
+        const row = salesTable.insertRow();
+
+        const values = [
+            sale.saleId,
+            sale.customer,
+            sale.product,
+            sale.quantity,
+            "₹" + Number(sale.total).toFixed(2),
+            sale.date
+        ];
+
+        values.forEach(value => {
+            const cell = row.insertCell();
+            cell.textContent = value;
+        });
+    });
+}
+async function loadSalesFromDatabase() {
+    try {
+        const response = await fetch("/api/sales");
+
+        if (!response.ok) {
+            throw new Error("Failed to load sales");
+        }
+
+        sales = await response.json();
+
+        displaySales();
+
+    } catch (error) {
+        console.error(error);
+        alert("Could not load sales from database.");
+    }
+}
+
+loadSalesFromDatabase();
+
+// Calculate total amount
+function calculateTotal() {
+    const quantity = Number(quantityInput.value);
+    const price = Number(priceInput.value);
+
+    totalInput.value = quantity > 0 && price > 0
+        ? "₹" + (quantity * price).toFixed(2)
+        : "";
+}
+
+// Automatically fetch product price
+productDropdown.addEventListener("change", function() {
+    const selectedProduct = products.find(
+        item => item.name === productDropdown.value
+    );
+
+    priceInput.value = selectedProduct
+        ? Number(selectedProduct.price)
+        : "";
+
+    calculateTotal();
+});
+
+quantityInput.addEventListener("input", calculateTotal);
+
+// Record sale
+form.addEventListener("submit", async function(event) {
+    event.preventDefault();
+const customer = customerDropdown.value;
+    const product = productDropdown.value;
+    const quantity = Number(quantityInput.value);
+
+    if (!customer || !product || quantity <= 0) {
+        alert("Enter valid sale details.");
+        return;
+    }
+
+    try {
+        const response = await fetch("/api/sales", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                customer,
+                product,
+                quantity
+            })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.message);
+        }
+
+        await loadSalesFromDatabase();
+
+        const productResponse = await fetch("/api/products");
+        const databaseProducts = await productResponse.json();
+
+        products = databaseProducts.map(item => ({
+            id: item.id,
+            name: item.name,
+            category: item.category,
+            price: Number(item.price),
+            quantity: Number(item.quantity),
+            minStock: Number(item.min_stock)
+        }));
+
+        saveData();
+
+        form.reset();
+        priceInput.value = "";
+        totalInput.value = "";
+
+        alert("Sale recorded successfully!");
+
+    } catch (error) {
+        console.error(error);
+        alert(error.message || "Could not record sale.");
+    }
+});
+</script>
+</body>
+</html>
