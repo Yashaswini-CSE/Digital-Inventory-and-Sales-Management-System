@@ -43,9 +43,9 @@
                 <thead>
                     <tr>
                         <th>Product Name</th>
-                        <th>Available Quantity</th>
-                        <th>Minimum Stock</th>
-                        <th>Status</th>
+<th>Notification Message</th>
+<th>Date & Time</th>
+<th>Status</th>
                     </tr>
                 </thead>
 
@@ -54,52 +54,80 @@
         </div>
     </div>
  <script src="script.js"></script>
-    
+
 <script>
 async function displayNotifications() {
     const lowStockTable = document.getElementById("lowStockTable");
 
     try {
-        const response = await fetch("/api/products");
+        const response = await fetch("/api/notifications");
 
         if (!response.ok) {
-            throw new Error("Failed to load products");
+            throw new Error("Failed to load notifications");
         }
 
-        const products = await response.json();
-
-        const lowStockProducts = products.filter(product =>
-            Number(product.quantity) <= Number(product.min_stock)
-        );
-
-        const availableProducts = products.filter(product =>
-            Number(product.quantity) > Number(product.min_stock)
-        );
+        const notifications = await response.json();
 
         document.getElementById("lowCount").textContent =
-            lowStockProducts.length;
+            notifications.length;
 
-        document.getElementById("availableCount").textContent =
-            availableProducts.length;
+        document.getElementById("availableCount").textContent = "—";
 
         lowStockTable.innerHTML = "";
 
-        lowStockProducts.forEach(product => {
-            const row = lowStockTable.insertRow();
-
-            row.insertCell().textContent = product.name;
-            row.insertCell().textContent = product.quantity;
-            row.insertCell().textContent = product.min_stock;
-            row.insertCell().textContent = "Low Stock";
-        });
-
-        if (lowStockProducts.length === 0) {
+        if (notifications.length === 0) {
             const row = lowStockTable.insertRow();
             const cell = row.insertCell();
 
             cell.colSpan = 4;
-            cell.textContent = "No low-stock products!";
+            cell.textContent = "No notifications available!";
+            return;
         }
+
+        notifications.forEach(notification => {
+            const row = lowStockTable.insertRow();
+
+            row.insertCell().textContent = notification.product_name;
+
+            row.insertCell().textContent =
+                notification.message;
+
+            row.insertCell().textContent =
+                new Date(notification.created_at).toLocaleString();
+
+          const statusCell = row.insertCell();
+
+statusCell.textContent = notification.status;
+
+if (notification.status === "Pending") {
+    const button = document.createElement("button");
+
+    button.textContent = "Mark as Read";
+
+    button.onclick = async function () {
+        try {
+            const response = await fetch(
+                `/api/notifications/${notification.id}`,
+                {
+                    method: "PUT"
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error("Failed to update status");
+            }
+
+            displayNotifications();
+
+        } catch (error) {
+            console.error(error);
+            alert("Could not update notification status.");
+        }
+    };
+
+    statusCell.appendChild(button);
+}
+        });
 
     } catch (error) {
         console.error(error);

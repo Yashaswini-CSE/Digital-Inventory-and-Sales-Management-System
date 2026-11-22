@@ -54,6 +54,24 @@ Please restock this product.`
         return false;
     }
 }
+// Save low-stock notification in MySQL
+async function saveLowStockNotification(product) {
+    try {
+        await db.query(
+            "INSERT INTO notifications (product_name, message, status) VALUES (?, ?, ?)",
+            [
+                product.name,
+                `Low stock alert! Current quantity: ${product.quantity}. Minimum stock: ${product.min_stock}.`,
+                "Pending"
+            ]
+        );
+
+        console.log("Low-stock notification saved.");
+
+    } catch (error) {
+        console.error("Failed to save notification:", error.message);
+    }
+}
 
 // Check backend
 app.get("/api/test", (req, res) => {
@@ -243,6 +261,11 @@ if (
         quantity: productQuantity,
         min_stock: minimumStock
     });
+    await saveLowStockNotification({
+    name: name.trim(),
+    quantity: productQuantity,
+    min_stock: minimumStock
+});
 }
 
         res.json({
@@ -569,13 +592,18 @@ if (saleQuantity > previousQuantity) {
         );
 await connection.commit();
 transactionStarted = false;
-
-// Send email when stock becomes low
+// Send email and save notification when stock becomes low
 if (
     previousQuantity > minimumStock &&
     newQuantity <= minimumStock
 ) {
     await sendLowStockEmail({
+        name: productRecord.name,
+        quantity: newQuantity,
+        min_stock: minimumStock
+    });
+
+    await saveLowStockNotification({
         name: productRecord.name,
         quantity: newQuantity,
         min_stock: minimumStock
@@ -608,6 +636,55 @@ res.status(201).json({
         if (connection) {
             connection.release();
         }
+    }
+});
+// ==============================
+// NOTIFICATIONS
+// ==============================
+
+// Get all notifications
+app.get("/api/notifications", async (req, res) => {
+    try {
+        const [rows] = await db.query(
+            "SELECT * FROM notifications ORDER BY id DESC"
+        );
+
+        res.json(rows);
+
+    } catch (error) {
+        console.error(error);
+
+        res.status(500).json({
+            message: "Failed to fetch notifications"
+        });
+    }
+});
+// Mark notification as read
+app.put("/api/notifications/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const [result] = await db.query(
+            "UPDATE notifications SET status = ? WHERE id = ?",
+            ["Read", id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                message: "Notification not found"
+            });
+        }
+
+        res.json({
+            message: "Notification marked as read!"
+        });
+
+    } catch (error) {
+        console.error(error);
+
+        res.status(500).json({
+            message: "Failed to update notification"
+        });
     }
 });
 
