@@ -296,8 +296,7 @@ function generateSalesReport() {
 
         filteredSales.forEach((sale, index) => {
             const row = table.insertRow();
-
-            row.insertCell().textContent = index + 1;
+row.insertCell().textContent = sale.saleId;
             row.insertCell().textContent = sale.customer;
             row.insertCell().textContent = sale.product;
             row.insertCell().textContent = sale.quantity;
