@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,6 +7,7 @@
     <title>Sales Management</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
     <div class="sidebar">
@@ -26,16 +28,18 @@
             <h2>Record New Sale</h2>
 
             <form id="salesForm">
-<label>Customer Name</label><br>
-<select id="customer" required>
-    <option value="">Select Customer</option>
-</select>
+
+                <label>Customer Name</label><br>
+                <select id="customer" required>
+                    <option value="">Loading Customers...</option>
+                </select>
+
                 <br><br>
 
                 <label>Product Name</label><br>
-                <select id="product"required>
-                    <option value="">Select Product</option>
-                </select>               
+                <select id="product" required>
+                    <option value="">Loading Products...</option>
+                </select>
 
                 <br><br>
 
@@ -47,8 +51,8 @@
 
                 <label>Price per Item (₹)</label><br>
                 <input type="number" id="price"
-    min="0.01" step="0.01"
-    placeholder="Automatic Price" readonly required>
+                    min="0.01" step="0.01"
+                    placeholder="Automatic Price" readonly required>
 
                 <br><br>
 
@@ -82,200 +86,225 @@
             </table>
         </div>
     </div>
+
     <script src="script.js"></script>
+
     <script>
-       
-const productDropdown = document.getElementById("product");
-const customerDropdown = document.getElementById("customer");
-const form = document.getElementById("salesForm");
-const quantityInput = document.getElementById("quantity");
-const priceInput = document.getElementById("price");
-const totalInput = document.getElementById("total");
-const salesTable = document.getElementById("salesTable");
+        const productDropdown = document.getElementById("product");
+        const customerDropdown = document.getElementById("customer");
+        const salesForm = document.getElementById("salesForm");
+        const quantityInput = document.getElementById("quantity");
+        const priceInput = document.getElementById("price");
+        const totalInput = document.getElementById("total");
+        const salesTable = document.getElementById("salesTable");
 
-// Load available products from MySQL
-async function loadProductsForSales() {
-    try {
-        const response = await fetch("/api/products");
+        // Store database records for this page
+        let salesPageProducts = [];
+        let salesPageCustomers = [];
 
-        if (!response.ok) {
-            throw new Error("Failed to load products");
+        // LOAD PRODUCTS FROM MYSQL
+        async function loadProductsForSales() {
+            try {
+                const response = await fetch("/api/products");
+
+                if (!response.ok) {
+                    throw new Error("Could not fetch products");
+                }
+
+                salesPageProducts = await response.json();
+
+                productDropdown.innerHTML =
+                    '<option value="">Select Product</option>';
+
+                salesPageProducts.forEach(item => {
+                    const option = document.createElement("option");
+
+                    option.value = item.name;
+
+                    option.textContent =
+                        item.name + " (Stock: " + item.quantity + ")";
+
+                    if (Number(item.quantity) <= 0) {
+                        option.disabled = true;
+                        option.textContent += " - Out of Stock";
+                    }
+
+                    productDropdown.appendChild(option);
+                });
+
+            } catch (error) {
+                console.error("Product loading error:", error);
+
+                productDropdown.innerHTML =
+                    '<option value="">Failed to load products</option>';
+            }
         }
 
-        const databaseProducts = await response.json();
+        // LOAD CUSTOMERS FROM MYSQL
+        async function loadCustomersForSales() {
+            try {
+                const response = await fetch("/api/customers");
 
-        productDropdown.innerHTML =
-            '<option value="">Select Product</option>';
+                if (!response.ok) {
+                    throw new Error("Could not fetch customers");
+                }
 
-        databaseProducts.forEach(item => {
-            const option = document.createElement("option");
-            option.value = item.name;
-            option.textContent = item.name;
-            productDropdown.appendChild(option);
-        });
+                salesPageCustomers = await response.json();
 
-    } catch (error) {
-        console.error(error);
-        alert("Could not load products.");
-    }
-}
+                customerDropdown.innerHTML =
+                    '<option value="">Select Customer</option>';
 
-loadProductsForSales();
-// Load customers from MySQL
-async function loadCustomersForSales() {
-    try {
-        const response = await fetch("/api/customers");
+                salesPageCustomers.forEach(item => {
+                    const option = document.createElement("option");
 
-        if (!response.ok) {
-            throw new Error("Failed to load customers");
+                    option.value = item.name;
+                    option.textContent = item.name;
+
+                    customerDropdown.appendChild(option);
+                });
+
+            } catch (error) {
+                console.error("Customer loading error:", error);
+
+                customerDropdown.innerHTML =
+                    '<option value="">Failed to load customers</option>';
+            }
         }
 
-        const databaseCustomers = await response.json();
+        // DISPLAY SALES HISTORY
+        function displaySalesPageRecords(salesRecords) {
+            salesTable.innerHTML = "";
 
-        customerDropdown.innerHTML =
-            '<option value="">Select Customer</option>';
+            salesRecords.forEach(sale => {
+                const row = salesTable.insertRow();
 
-        databaseCustomers.forEach(item => {
-            const option = document.createElement("option");
+                const values = [
+                    sale.saleId,
+                    sale.customer,
+                    sale.product,
+                    sale.quantity,
+                    "₹" + Number(sale.total).toFixed(2),
+                    sale.date
+                ];
 
-            option.value = item.name;
-            option.textContent = item.name;
-
-            customerDropdown.appendChild(option);
-        });
-
-    } catch (error) {
-        console.error(error);
-        alert("Could not load customers.");
-    }
-}
-
-loadCustomersForSales();
-// Display saved sales
-function displaySales() {
-    salesTable.innerHTML = "";
-
-    sales.forEach(sale => {
-        const row = salesTable.insertRow();
-
-        const values = [
-            sale.saleId,
-            sale.customer,
-            sale.product,
-            sale.quantity,
-            "₹" + Number(sale.total).toFixed(2),
-            sale.date
-        ];
-
-        values.forEach(value => {
-            const cell = row.insertCell();
-            cell.textContent = value;
-        });
-    });
-}
-async function loadSalesFromDatabase() {
-    try {
-        const response = await fetch("/api/sales");
-
-        if (!response.ok) {
-            throw new Error("Failed to load sales");
+                values.forEach(value => {
+                    const cell = row.insertCell();
+                    cell.textContent = value ?? "";
+                });
+            });
         }
 
-        sales = await response.json();
+        // LOAD SALES FROM MYSQL
+        async function loadSalesFromDatabase() {
+            try {
+                const response = await fetch("/api/sales");
 
-        displaySales();
+                if (!response.ok) {
+                    throw new Error("Could not fetch sales");
+                }
 
-    } catch (error) {
-        console.error(error);
-        alert("Could not load sales from database.");
-    }
-}
+                const databaseSales = await response.json();
 
-loadSalesFromDatabase();
+                displaySalesPageRecords(databaseSales);
 
-// Calculate total amount
-function calculateTotal() {
-    const quantity = Number(quantityInput.value);
-    const price = Number(priceInput.value);
-
-    totalInput.value = quantity > 0 && price > 0
-        ? "₹" + (quantity * price).toFixed(2)
-        : "";
-}
-
-// Automatically fetch product price
-productDropdown.addEventListener("change", function() {
-    const selectedProduct = products.find(
-        item => item.name === productDropdown.value
-    );
-
-    priceInput.value = selectedProduct
-        ? Number(selectedProduct.price)
-        : "";
-
-    calculateTotal();
-});
-
-quantityInput.addEventListener("input", calculateTotal);
-
-// Record sale
-form.addEventListener("submit", async function(event) {
-    event.preventDefault();
-const customer = customerDropdown.value;
-    const product = productDropdown.value;
-    const quantity = Number(quantityInput.value);
-
-    if (!customer || !product || quantity <= 0) {
-        alert("Enter valid sale details.");
-        return;
-    }
-
-    try {
-        const response = await fetch("/api/sales", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                customer,
-                product,
-                quantity
-            })
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-            throw new Error(result.message);
+            } catch (error) {
+                console.error("Sales loading error:", error);
+            }
         }
 
-        await loadSalesFromDatabase();
+        // CALCULATE TOTAL
+        function calculateSalesTotal() {
+            const quantity = Number(quantityInput.value);
+            const price = Number(priceInput.value);
 
-        const productResponse = await fetch("/api/products");
-        const databaseProducts = await productResponse.json();
+            totalInput.value =
+                quantity > 0 && price > 0
+                    ? "₹" + (quantity * price).toFixed(2)
+                    : "";
+        }
 
-        products = databaseProducts.map(item => ({
-            id: item.id,
-            name: item.name,
-            category: item.category,
-            price: Number(item.price),
-            quantity: Number(item.quantity),
-            minStock: Number(item.min_stock)
-        }));
+        // AUTOMATICALLY FETCH PRICE FROM DATABASE PRODUCT
+        productDropdown.addEventListener("change", function() {
 
-        saveData();
+            const selectedProduct = salesPageProducts.find(
+                item => item.name === productDropdown.value
+            );
 
-        form.reset();
-        priceInput.value = "";
-        totalInput.value = "";
+            priceInput.value = selectedProduct
+                ? Number(selectedProduct.price)
+                : "";
 
-        alert("Sale recorded successfully!");
+            calculateSalesTotal();
+        });
 
-    } catch (error) {
-        console.error(error);
-        alert(error.message || "Could not record sale.");
-    }
-});
-</script>
+        quantityInput.addEventListener("input", calculateSalesTotal);
+
+        // RECORD SALE
+        salesForm.addEventListener("submit", async function(event) {
+            event.preventDefault();
+
+            const customer = customerDropdown.value;
+            const product = productDropdown.value;
+            const quantity = Number(quantityInput.value);
+
+            const selectedProduct = salesPageProducts.find(
+                item => item.name === product
+            );
+
+            if (!customer || !selectedProduct || quantity <= 0) {
+                alert("Please enter valid sale details.");
+                return;
+            }
+
+            if (quantity > Number(selectedProduct.quantity)) {
+                alert("Insufficient stock available!");
+                return;
+            }
+
+            try {
+                const response = await fetch("/api/sales", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        customer: customer,
+                        product: product,
+                        quantity: quantity
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        result.message || "Could not record sale."
+                    );
+                }
+
+                alert("Sale recorded successfully!");
+
+                salesForm.reset();
+
+                priceInput.value = "";
+                totalInput.value = "";
+
+                // Refresh products, stock and sales history
+                await loadProductsForSales();
+                await loadSalesFromDatabase();
+
+            } catch (error) {
+                console.error("Sale error:", error);
+                alert(error.message || "Could not record sale.");
+            }
+        });
+
+        // LOAD ALL DATA WHEN PAGE OPENS
+        loadProductsForSales();
+        loadCustomersForSales();
+        loadSalesFromDatabase();
+
+    </script>
+
 </body>
 </html>
