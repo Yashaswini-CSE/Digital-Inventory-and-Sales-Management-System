@@ -8,7 +8,7 @@ const app = express();
 const db = require("./db");
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "5mb" }));
 
 // Serve frontend files from public folder
 app.use(express.static("public"));
@@ -72,7 +72,24 @@ async function saveLowStockNotification(product) {
         console.error("Failed to save notification:", error.message);
     }
 }
+// Save stock-restored notification in MySQL
+async function saveStockRestoredNotification(product) {
+    try {
+        await db.query(
+            "INSERT INTO notifications (product_name, message, status) VALUES (?, ?, ?)",
+            [
+                product.name,
+                `Stock restored! Current quantity: ${product.quantity}. Minimum stock: ${product.min_stock}.`,
+                "Pending"
+            ]
+        );
 
+        console.log("Stock-restored notification saved.");
+
+    } catch (error) {
+        console.error("Failed to save stock-restored notification:", error.message);
+    }
+}
 // Check backend
 app.get("/api/test", (req, res) => {
     res.json({
@@ -266,6 +283,17 @@ if (
     quantity: productQuantity,
     min_stock: minimumStock
 });
+}
+// Save notification when stock is restored
+if (
+    Number(oldProduct.quantity) <= Number(oldProduct.min_stock) &&
+    productQuantity > minimumStock
+) {
+    await saveStockRestoredNotification({
+        name: name.trim(),
+        quantity: productQuantity,
+        min_stock: minimumStock
+    });
 }
 
         res.json({

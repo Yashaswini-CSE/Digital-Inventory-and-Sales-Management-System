@@ -434,3 +434,12 @@ tr:hover {
     color: #d97706;
     font-weight: bold;
 }
+/* Smaller doughnut graph */
+.doughnut-card {
+    max-width: 450px;
+    margin: 20px auto;
+}
+
+.doughnut-card canvas {
+    max-width: 100%;
+}
