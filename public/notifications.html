@@ -60,19 +60,37 @@ async function displayNotifications() {
     const lowStockTable = document.getElementById("lowStockTable");
 
     try {
-        const response = await fetch("/api/notifications");
+        // Fetch notifications and current products from MySQL
+        const [notificationResponse, productResponse] =
+            await Promise.all([
+                fetch("/api/notifications"),
+                fetch("/api/products")
+            ]);
 
-        if (!response.ok) {
-            throw new Error("Failed to load notifications");
+        if (!notificationResponse.ok || !productResponse.ok) {
+            throw new Error("Failed to load data");
         }
 
-        const notifications = await response.json();
+        const notifications = await notificationResponse.json();
+        const products = await productResponse.json();
 
+        // Calculate current stock status
+        const lowStockProducts = products.filter(product =>
+            Number(product.quantity) <= Number(product.min_stock)
+        );
+
+        const availableProducts = products.filter(product =>
+            Number(product.quantity) > 0
+        );
+
+        // Update summary cards
         document.getElementById("lowCount").textContent =
-            notifications.length;
+            lowStockProducts.length;
 
-        document.getElementById("availableCount").textContent = "—";
+        document.getElementById("availableCount").textContent =
+            availableProducts.length;
 
+        // Display notification history
         lowStockTable.innerHTML = "";
 
         if (notifications.length === 0) {
@@ -88,45 +106,41 @@ async function displayNotifications() {
             const row = lowStockTable.insertRow();
 
             row.insertCell().textContent = notification.product_name;
-
-            row.insertCell().textContent =
-                notification.message;
+            row.insertCell().textContent = notification.message;
 
             row.insertCell().textContent =
                 new Date(notification.created_at).toLocaleString();
 
-          const statusCell = row.insertCell();
+            const statusCell = row.insertCell();
 
-statusCell.textContent = notification.status;
+            statusCell.textContent = notification.status;
 
-if (notification.status === "Pending") {
-    const button = document.createElement("button");
+            if (notification.status === "Pending") {
+                const button = document.createElement("button");
 
-    button.textContent = "Mark as Read";
+                button.textContent = "Mark as Read";
 
-    button.onclick = async function () {
-        try {
-            const response = await fetch(
-                `/api/notifications/${notification.id}`,
-                {
-                    method: "PUT"
-                }
-            );
+                button.onclick = async function () {
+                    try {
+                        const response = await fetch(
+                            `/api/notifications/${notification.id}`,
+                            { method: "PUT" }
+                        );
 
-            if (!response.ok) {
-                throw new Error("Failed to update status");
+                        if (!response.ok) {
+                            throw new Error("Failed to update status");
+                        }
+
+                        displayNotifications();
+
+                    } catch (error) {
+                        console.error(error);
+                        alert("Could not update notification status.");
+                    }
+                };
+
+                statusCell.appendChild(button);
             }
-
-            displayNotifications();
-
-        } catch (error) {
-            console.error(error);
-            alert("Could not update notification status.");
-        }
-    };
-
-    statusCell.appendChild(button);
-}
         });
 
     } catch (error) {
@@ -136,6 +150,7 @@ if (notification.status === "Pending") {
 }
 
 displayNotifications();
+
 </script>
 
 </body>
